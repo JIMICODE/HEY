@@ -1,150 +1,154 @@
 #include<Windows.h>
-#include<iostream>
+#include<d3d9.h>
 #include<time.h>
-#include<d3d12.h>
+#include<iostream>
+using namespace std;
+#pragma comment(lib, "d3d9.lib")
 
-#ifndef UNICODE
-#define UNICODE
-#endif // !UNICODE
+const string APPTITLE = "Direcet3D_Windowed";
+const wchar_t title[] = L"fucker";
+const int SCREENW = 1024;
+const int SCREENH = 769;
+bool isRun = false;
 
-//const std::string ProgramTitle = "Hello Windows";
-const wchar_t title[] = L"Game Loop";
-HWND window;
-HDC device;
+LPDIRECT3D9 d3d = NULL;
+LPDIRECT3DDEVICE9 d3ddev = NULL;
 bool gameover = false;
-RECT rect;
 
-int x = 0;
-int y = 0;
-int speedx = 1;
-int speedy = 1;
+#define KEY_DOWN(vk_code) ((GetAsyncKeyState(vk_code) & 0x800) ? 1 : 0)
 
-void DrawBitmap(const wchar_t filename[], int x, int y, const RECT rect)
+bool Game_Init(HWND hwnd)
 {
-	HBITMAP image = (HBITMAP)LoadImage(0, filename, IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
-	HBRUSH hbrush = (HBRUSH)GetStockObject(BLACK_BRUSH);
-	BITMAP bm;
-	GetObject(image, sizeof(BITMAP), &bm);
+	d3d = Direct3DCreate9(D3D_SDK_VERSION);
 
-	if (x <= rect.left)
+	if (d3d == NULL)
 	{
-		x = rect.left;
-		speedx = -speedx;
-	}
-	if (y <= rect.top)
-	{
-		y = rect.top;
-		speedy = -speedy;
-	}
-	if (x >= rect.right - bm.bmWidth)
-	{
-		x = rect.right - bm.bmWidth;
-		speedx = -speedx;
-	}
-	if (y >= rect.bottom - bm.bmHeight)
-	{
-		y = rect.bottom - bm.bmHeight;
-		speedy = -speedy;
+		MessageBox(hwnd, L"Error initializing Direct3D", L"Error", MB_OK);
+		return FALSE;
 	}
 
-	HDC hdcImage = CreateCompatibleDC(device);
-	SelectObject(hdcImage, image);
-	FillRect(device, &rect, hbrush);
-	BitBlt(device,
-		x, y,
-		bm.bmWidth, bm.bmHeight,
-		hdcImage,
-		0, 0,
-		SRCCOPY);
+	D3DPRESENT_PARAMETERS d3dpp;
+	ZeroMemory(&d3dpp, sizeof(d3dpp));
 
-	DeleteDC(hdcImage);
-	DeleteObject((HBITMAP)image);
+	d3dpp.Windowed = true;
+	d3dpp.SwapEffect = D3DSWAPEFFECT_DISCARD;
+	d3dpp.BackBufferFormat = D3DFMT_X8R8G8B8;
+	d3dpp.BackBufferCount = 1;
+	d3dpp.BackBufferWidth = SCREENW;
+	d3dpp.BackBufferHeight = SCREENH;
+	d3dpp.hDeviceWindow = hwnd;
+
+	d3d->CreateDevice(
+		D3DADAPTER_DEFAULT,
+		D3DDEVTYPE_HAL,
+		hwnd,
+		D3DCREATE_SOFTWARE_VERTEXPROCESSING,
+		&d3dpp,
+		&d3ddev);
+
+	if (d3ddev == NULL)
+	{
+		MessageBox(hwnd, L"Error creating Direct3D device", L"Error", MB_OK);
+		return FALSE;
+	}
+	return true;
 }
 
-bool Game_Init()
+void Game_Run(HWND hwnd)
 {
-	return 1;
+	if (d3ddev == NULL)
+	{
+		MessageBox(hwnd, L"NULL", L"NULL", NULL);
+		return;
+	}
+
+	d3ddev->Clear(0, NULL, D3DCLEAR_TARGET, D3DCOLOR_XRGB(125, 105, 66), 1.0f, 0);
+
+	if (d3ddev->BeginScene())
+	{
+		d3ddev->EndScene();
+		d3ddev->Present(NULL, NULL, NULL, NULL);
+	}
+
+	if (KEY_DOWN(VK_ESCAPE))
+	{
+		MessageBox(hwnd, L"ESC", L"ESC", NULL);
+		PostMessage(hwnd, WM_DESTROY, 0, 0);
+	}
+
+	if (!isRun)
+	{
+		MessageBox(hwnd, L"Running", L"Fuck", NULL);
+		isRun = true;
+	}
 }
 
-void Game_Run()
+void Game_End(HWND hwnd)
 {
-	if (gameover == true) return;
-
-	x += speedx;
-	y += speedy;
-
-	DrawBitmap(L"666/c.bmp", x, y, rect);
+	if (d3ddev)
+	{
+		d3ddev->Release();
+		d3ddev = NULL;
+	}
+	if (d3d)
+	{
+		d3d->Release();
+		d3d = NULL;
+	}
 }
 
-void Game_End()
+LRESULT WINAPI WinProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
-	ReleaseDC(window, device);
-}
-
-LRESULT CALLBACK WinProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
-{
-	switch (message)
+	switch (msg)
 	{
 	case WM_DESTROY:
-		PostQuitMessage(0);
+		gameover = true;
 		break;
 	}
-
-	return DefWindowProc(hwnd, message, wParam, lParam);
+	return DefWindowProc(hwnd, msg, wParam, lParam);
 }
 
-ATOM MyRegisterClass(HINSTANCE hInstance)
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR lpCmdLine, int nCmdShow)
 {
 	WNDCLASSEX wc;
+	MSG msg;
+
 	wc.cbSize = sizeof(WNDCLASSEX);
+	wc.lpfnWndProc = (WNDPROC)WinProc;
 	wc.style = CS_HREDRAW | CS_VREDRAW;
-	wc.lpfnWndProc = WinProc;
 	wc.cbClsExtra = 0;
 	wc.cbWndExtra = 0;
-	wc.hInstance = hInstance;
 	wc.hIcon = NULL;
+	wc.hIconSm = NULL;
+	wc.hInstance = hInstance;
 	wc.hCursor = LoadCursor(NULL, IDC_ARROW);
 	wc.hbrBackground = (HBRUSH)GetStockObject(WHITE_BRUSH);
-	wc.lpszMenuName = NULL;
 	wc.lpszClassName = title;
-	wc.hIconSm = NULL;
+	wc.lpszMenuName = NULL;
 
-	return RegisterClassEx(&wc);
-}
+	if (!RegisterClassEx(&wc))
+		return FALSE;
 
-bool InitInstance(HINSTANCE hInstance, int nCmdShow)
-{
-	window = CreateWindow(
+	HWND hwnd = CreateWindow(
 		title,
 		title,
 		WS_OVERLAPPEDWINDOW,
 		CW_USEDEFAULT,
 		CW_USEDEFAULT,
-		640, 480,
-		NULL, NULL,
+		SCREENW,
+		SCREENH,
+		(HWND)NULL,
+		(HMENU)NULL,
 		hInstance,
-		NULL);
+		(LPVOID)NULL
+	);
 
-	if (window == 0)	return 0;
+	if (hwnd == 0)	return 0;
 
-	ShowWindow(window, nCmdShow);
-	UpdateWindow(window);
+	ShowWindow(hwnd, nCmdShow);
+	UpdateWindow(hwnd);
 
-	device = GetDC(window);
-
-	return 1;
-}
-
-int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int nCmdShow)
-{
-	MyRegisterClass(hInstance);
-
-	if (!InitInstance(hInstance, nCmdShow)) return 0;
-	if (!Game_Init()) return 0;
-
-	MSG msg;
-
-	GetClientRect(window, &rect);
+	if (!Game_Init(hwnd))	return 0;
 
 	while (!gameover)
 	{
@@ -153,13 +157,10 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int nCmdShow)
 			TranslateMessage(&msg);
 			DispatchMessage(&msg);
 		}
-
-		Game_Run();
+		Game_Run(hwnd);
 	}
 
-	Game_End();
-
+	Game_End(hwnd);
 
 	return msg.wParam;
 }
-
