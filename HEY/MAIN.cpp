@@ -15,7 +15,7 @@ LPDIRECT3D9 d3d = NULL;
 LPDIRECT3DDEVICE9 d3ddev = NULL;
 bool gameover = false;
 
-#define KEY_DOWN(vk_code) ((GetAsyncKeyState(vk_code) & 0x800) ? 1 : 0)
+#define KEY_DOWN(vk_code) ((GetAsyncKeyState(vk_code) & 0x8000) ? 1 : 0)
 
 bool Game_Init(HWND hwnd)
 {
@@ -23,7 +23,7 @@ bool Game_Init(HWND hwnd)
 
 	if (d3d == NULL)
 	{
-		MessageBox(hwnd, L"Error initializing Direct3D", L"Error", MB_OK);
+		MessageBox(hwnd, "Error initializing Direct3D", "Error", MB_OK);
 		return FALSE;
 	}
 
@@ -32,7 +32,7 @@ bool Game_Init(HWND hwnd)
 
 	d3dpp.Windowed = true;
 	d3dpp.SwapEffect = D3DSWAPEFFECT_DISCARD;
-	d3dpp.BackBufferFormat = D3DFMT_X8R8G8B8;
+	d3dpp.BackBufferFormat = D3DFMT_UNKNOWN;
 	d3dpp.BackBufferCount = 1;
 	d3dpp.BackBufferWidth = SCREENW;
 	d3dpp.BackBufferHeight = SCREENH;
@@ -48,7 +48,7 @@ bool Game_Init(HWND hwnd)
 
 	if (d3ddev == NULL)
 	{
-		MessageBox(hwnd, L"Error creating Direct3D device", L"Error", MB_OK);
+		MessageBox(hwnd, "Error creating Direct3D device", "Error", MB_OK);
 		return FALSE;
 	}
 	return true;
@@ -58,27 +58,27 @@ void Game_Run(HWND hwnd)
 {
 	if (d3ddev == NULL)
 	{
-		MessageBox(hwnd, L"NULL", L"NULL", NULL);
+		MessageBox(hwnd, "NULL", "NULL", NULL);
 		return;
 	}
 
-	d3ddev->Clear(0, NULL, D3DCLEAR_TARGET, D3DCOLOR_XRGB(125, 105, 66), 1.0f, 0);
+	d3ddev->Clear(0, NULL, D3DCLEAR_TARGET, D3DCOLOR_XRGB(0, 0, 0), -1.0f, 0);
 
 	if (d3ddev->BeginScene())
 	{
 		d3ddev->EndScene();
-		d3ddev->Present(NULL, NULL, NULL, NULL);
 	}
+	d3ddev->Present(NULL, NULL, hwnd, NULL);
 
 	if (KEY_DOWN(VK_ESCAPE))
 	{
-		MessageBox(hwnd, L"ESC", L"ESC", NULL);
+		MessageBox(hwnd, "ESC", "ESC", NULL);
 		PostMessage(hwnd, WM_DESTROY, 0, 0);
 	}
 
 	if (!isRun)
 	{
-		MessageBox(hwnd, L"Running", L"Fuck", NULL);
+		MessageBox(hwnd, "Running", "Fuck", NULL);
 		isRun = true;
 	}
 }
@@ -122,16 +122,16 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR lpCmdLine, int nCmdShow
 	wc.hIconSm = NULL;
 	wc.hInstance = hInstance;
 	wc.hCursor = LoadCursor(NULL, IDC_ARROW);
-	wc.hbrBackground = (HBRUSH)GetStockObject(WHITE_BRUSH);
-	wc.lpszClassName = title;
+	wc.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+	wc.lpszClassName = APPTITLE.c_str();
 	wc.lpszMenuName = NULL;
 
 	if (!RegisterClassEx(&wc))
 		return FALSE;
 
 	HWND hwnd = CreateWindow(
-		title,
-		title,
+		APPTITLE.c_str(),
+		APPTITLE.c_str(),
 		WS_OVERLAPPEDWINDOW,
 		CW_USEDEFAULT,
 		CW_USEDEFAULT,
