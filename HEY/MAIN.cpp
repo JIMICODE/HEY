@@ -1,10 +1,12 @@
 #include<Windows.h>
 #include<d3d9.h>
 #include<time.h>
+#include<d3dx9.h>
 #include<iostream>
 using namespace std;
-//#pragma comment(lib, "d3dx9.lib")
+
 #pragma comment(lib, "d3d9.lib")
+#pragma comment(lib, "d3dx9.lib")
 
 const string APPTITLE = "Direcet3D_Windowed";
 const wchar_t title[] = L"Create Surface Program";
