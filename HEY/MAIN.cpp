@@ -3,16 +3,18 @@
 #include<time.h>
 #include<iostream>
 using namespace std;
+//#pragma comment(lib, "d3dx9.lib")
 #pragma comment(lib, "d3d9.lib")
 
 const string APPTITLE = "Direcet3D_Windowed";
-const wchar_t title[] = L"fucker";
+const wchar_t title[] = L"Create Surface Program";
 const int SCREENW = 1024;
 const int SCREENH = 769;
-bool isRun = false;
 
 LPDIRECT3D9 d3d = NULL;
 LPDIRECT3DDEVICE9 d3ddev = NULL;
+LPDIRECT3DSURFACE9 backbuffer = NULL;
+LPDIRECT3DSURFACE9 surface = NULL;
 bool gameover = false;
 
 #define KEY_DOWN(vk_code) ((GetAsyncKeyState(vk_code) & 0x8000) ? 1 : 0)
@@ -24,13 +26,10 @@ bool Game_Init(HWND hwnd)
 	if (d3d == NULL)
 	{
 		MessageBox(hwnd, L"Error initializing Direct3D", L"Error", MB_OK);
-		return FALSE;
+		return false;
 	}
 
 	D3DPRESENT_PARAMETERS d3dpp;
-	//D3DDISPLAYMODE dm;
-
-	//d3d->GetAdapterDisplayMode(D3DADAPTER_DEFAULT, &dm);
 	ZeroMemory(&d3dpp, sizeof(d3dpp));
 
 	d3dpp.Windowed = true;
@@ -45,7 +44,7 @@ bool Game_Init(HWND hwnd)
 		D3DADAPTER_DEFAULT,
 		D3DDEVTYPE_HAL,
 		hwnd,
-		D3DCREATE_HARDWARE_VERTEXPROCESSING,
+		D3DCREATE_SOFTWARE_VERTEXPROCESSING,
 		&d3dpp,
 		&d3ddev);
 
@@ -54,23 +53,49 @@ bool Game_Init(HWND hwnd)
 		MessageBox(hwnd, L"Error creating Direct3D device", L"Error", MB_OK);
 		return FALSE;
 	}
-	return TRUE;
+
+	srand((unsigned int)time(NULL));
+	d3ddev->Clear(0, NULL, D3DCLEAR_TARGET, D3DCOLOR_XRGB(0, 255, 255), 1.0f, 0);
+	d3ddev->GetBackBuffer(0, 0, D3DBACKBUFFER_TYPE_MONO, &backbuffer);
+
+	HRESULT result = d3ddev->CreateOffscreenPlainSurface(
+		100,
+		100,
+		D3DFMT_X8R8G8B8,
+		D3DPOOL_DEFAULT,
+		&surface,
+		NULL
+	);
+
+	if (result != D3D_OK)	return false;
+	return true;
 }
 
 void Game_Run(HWND hwnd)
 {
 	if (d3ddev == NULL)
 	{
-		MessageBox(hwnd, L"NULL", L"NULL", NULL);
+		MessageBox(hwnd, L"D3Ddevice is NULL", L"D3Ddevice is NULL", NULL);
 		return;
 	}
 
-	d3ddev->Clear(0, NULL, D3DCLEAR_TARGET, D3DCOLOR_XRGB(0, 255, 255), 1.0f, 0);
-
 	if (d3ddev->BeginScene())
 	{
+		int r = rand() % 255;
+		int g = rand() % 255;
+		int b = rand() % 255;
+
+		d3ddev->ColorFill(surface, NULL, D3DCOLOR_XRGB(r, g, b));
+
+		RECT rect;
+		rect.left = rand() % SCREENW;
+		rect.right = rect.left + rand() % SCREENW / 2;
+		rect.top = rand() % SCREENH;
+		rect.bottom = rect.top + rand() % SCREENH / 2;
+
+		d3ddev->StretchRect(surface, NULL, backbuffer, &rect, D3DTEXF_NONE);
 		d3ddev->EndScene();
-		d3ddev->Present(NULL, NULL, hwnd, NULL);
+		d3ddev->Present(NULL, NULL, NULL, NULL);
 	}
 	
 
@@ -80,11 +105,6 @@ void Game_Run(HWND hwnd)
 		PostMessage(hwnd, WM_DESTROY, 0, 0);
 	}
 
-	if (!isRun)
-	{
-		MessageBox(hwnd, L"Running", L"Fuck", NULL);
-		isRun = true;
-	}
 }
 
 void Game_End(HWND hwnd)
@@ -99,6 +119,7 @@ void Game_End(HWND hwnd)
 		d3d->Release();
 		d3d = NULL;
 	}
+	if (surface) surface->Release();
 }
 
 LRESULT WINAPI WinProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
@@ -107,7 +128,8 @@ LRESULT WINAPI WinProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	{
 	case WM_DESTROY:
 		gameover = true;
-		break;
+		PostQuitMessage(0);
+		return 0;
 	}
 	return DefWindowProc(hwnd, msg, wParam, lParam);
 }
